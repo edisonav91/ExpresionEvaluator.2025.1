@@ -1,29 +1,113 @@
-﻿namespace Evaluator.Logic;
+﻿using System.Text;
+
+namespace Evaluator.Logic;
 
 public class FunctionEvaluator
 {
     public static double Evalute(string infix)
     {
-        var postfix = ToPostfix(infix);
+        var tokens = Tokens(infix);
+        var postfix = ToPostfix(tokens);
         return Calculate(postfix);
     }
 
-    private static double Calculate(string postfix)
+    private static List<string> Tokens(string expression)
+    {
+        var tokens = new List<string>();
+        var numberBuilder = new StringBuilder();
+
+        foreach (char c in expression)
+        {
+            if (char.IsDigit(c) || c == '.')
+            {
+                numberBuilder.Append(c);
+            }
+            else if (IsOperator(c) || c == '(' || c == ')')
+            {
+                if (numberBuilder.Length > 0)
+                {
+                    tokens.Add(numberBuilder.ToString());
+                    numberBuilder.Clear();
+                }
+                tokens.Add(c.ToString());
+            }
+            else if (!char.IsWhiteSpace(c))
+            {
+                throw new Exception($"Invalid text: {c}");
+            }
+        }
+
+        if (numberBuilder.Length > 0)
+        {
+            tokens.Add(numberBuilder.ToString());
+        }
+
+        return tokens;
+    }
+
+    private static List<string> ToPostfix(List<string> tokens)
+    {
+        var stack = new Stack<string>();
+        var output = new List<string>();
+
+        foreach (var token in tokens)
+        {
+            if (double.TryParse(token, out _))
+            {
+                output.Add(token);
+            }
+            else if (token == "(")
+            {
+                stack.Push(token);
+            }
+            else if (token == ")")
+            {
+                while (stack.Peek() != "(")
+                {
+                    output.Add(stack.Pop());
+                }
+                stack.Pop();
+            }
+            else if (IsOperator(token[0]))
+            {
+                while (stack.Count > 0 && PriorityExpression(token[0]) <= PriorityStack(stack.Peek()[0]))
+                {
+                    output.Add(stack.Pop());
+                }
+                stack.Push(token);
+            }
+        }
+
+        while (stack.Count > 0)
+        {
+            output.Add(stack.Pop());
+        }
+
+        return output;
+    }
+
+    private static double Calculate(List<string> postfix)
     {
         var stack = new Stack<double>();
-        foreach (var item in postfix)
+
+        foreach (var token in postfix)
         {
-            if (IsOperator(item))
+            if (double.TryParse(token.Replace('.', ','), out double number))
             {
-                var operator2 = stack.Pop();
-                var operator1 = stack.Pop();
-                stack.Push(Result(operator1, item, operator2));
+                stack.Push(number);
+            }
+            else if (IsOperator(token[0]))
+            {
+                var right = stack.Pop();
+                var left = stack.Pop();
+                stack.Push(Result(left, token[0], right));
             }
             else
             {
-                stack.Push(char.GetNumericValue(item));
+                throw new Exception($"Invalid token: {token}");
             }
         }
+
         return stack.Pop();
     }
 
@@ -38,54 +122,6 @@ public class FunctionEvaluator
             '^' => Math.Pow(operator1, operator2),
             _ => throw new Exception("Invalid expresion"),
         };
-    }
-
-    private static string ToPostfix(string infix)
-    {
-        var stack = new Stack<char>();
-        var postfix = string.Empty;
-        foreach (var item in infix)
-        {
-            if (IsOperator(item))
-            {
-                if (stack.Count == 0)
-                {
-                    stack.Push(item);
-                }
-                else
-                {
-                    if (item == ')')
-                    {
-                        do
-                        {
-                            postfix += stack.Pop();
-                        } while (stack.Peek() != '(');
-                        stack.Pop();
-                    }
-                    else
-                    {
-                        if (PriorityExpression(item) > PriorityStack(stack.Peek()))
-                        {
-                            stack.Push(item);
-                        }
-                        else
-                        {
-                            postfix += stack.Pop();
-                            stack.Push(item);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                postfix += item;
-            }
-        }
-        do
-        {
-            postfix += stack.Pop();
-        } while (stack.Count > 0);
-        return postfix;
     }
 
     private static int PriorityStack(char item)
@@ -116,5 +152,5 @@ public class FunctionEvaluator
         };
     }
 
-    private static bool IsOperator(char item) => "()^*/+-".IndexOf(item) >= 0;
+    private static bool IsOperator(char c) => "+-*/^".IndexOf(c) >= 0;
 }
