@@ -14,7 +14,7 @@ public class FunctionEvaluator
     private static List<string> Tokens(string expression)
     {
         var tokens = new List<string>();
-        var numberBuilder = new StringBuilder();
+        var numberBuilder = new StringBuilder(); 
 
         foreach (char c in expression)
         {
