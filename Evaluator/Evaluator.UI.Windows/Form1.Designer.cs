@@ -343,7 +343,7 @@ namespace Evaluator.UI.Windows
 
         private void button17_Click(object sender, EventArgs e)
         {
-            throw new NotImplementedException();
+            txtDisplay.Text += "^";
         }
 
         #endregion
